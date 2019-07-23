@@ -4,10 +4,10 @@ typedef struct CmdMove {
   int t;
   int vel;
 } cmdMove;
-typedef struct CmdWait {
-  int t;
-  char wait;
-} cmdWait;
+typedef struct CmdRotate {
+  int angle;
+  int vel;
+} cmdRotate;
 
 typedef struct Tile {
   char type;
@@ -20,9 +20,9 @@ typedef struct Tile {
 /*-----------------------------------------------------DECLARE VARIABLES---------------------------------------------*/
 
 tile my_tile;
-char program[] = "M 1000 50\nR 500 40\nM 500 -50\nS";
-int tis = 0, currTime = 0, prevTime = 0, i = 0, tile_time = TIMEOUT;
-byte oldState = 0, auxState = 0, next = 0;
+char program[] = "M 1000 50\nW 500 40\nM 500 -50\nS";
+int  i = 0, angle = 0;
+byte next = 0;
 
 
 /*-----------------------------------------------------END OF VARIABLE DECLARATION---------------------------------------------*/
@@ -33,31 +33,39 @@ void setup()
   Serial.begin(115200);
 }
 
+
 void loop() {
+
 
   if (next == 0)
   {
-    //Serial.println("HERE");
     readNewTile();
-    /*if (my_tile.type == 'F')
-    {
-      moveRobot(my_tile.data.Move.vel, 0);
-    }
-    else if (my_tile.type == 'S')
-    {
-      moveRobot(0, 0);
-    }
-    else if ( my_tile.type == 'W')
-    {
-      moveRobot(0, my_tile.data.Move.vel);
-    }*/
+    chooseState();
     next = 1;
   }
-  else if ((tis >= TIMEOUT) || (tis >= tile_time))
+  else if (next != 0 && robot.state == 1 && tis >= my_tile.data.Move.t)
+  {
+    next = 0;
+  }
+  else if (next != 0 && robot.state == 2  && angle > my_tile.data.Rotate.angle)
   {
     next = 0;
   }
 
+
+
+  if (robot.state == 1) //MOVE TILE
+  {
+    moveRobot(my_tile.data.Move.vel, 0);
+  }
+  else if (robot.state == 2) //ROTATE TILE
+  {
+    moveRobot(0, my_tile.data.Rotate.vel);
+  }
+  else if (robot.state == 0) //STOP TILE
+  {
+    moveRobot(0, 0);
+  }
 
 
 
@@ -92,8 +100,6 @@ void readNewTile(void)
   char line[strlen(program)];
   int j;
   j = 0;
-  auxState = oldState + 1;
-  setState(auxState);
   for ( ; program[i] != '\0'; i++)
   {
     if (program[i] == '\n')
@@ -112,39 +118,32 @@ void readNewTile(void)
 
   if (my_tile.type == 'M')
   {
-    sscanf(line, "%c %d %d", &trash, &my_tile.data.Move.t, &my_tile.data.Move.vel);
+    sscanf(line, "%c %d %ld", &trash, &my_tile.data.Move.t, &my_tile.data.Move.vel);
     tile_time = my_tile.data.Move.t;
   }
-  else if (my_tile.type == 'R')
+  else if (my_tile.type == 'W')
   {
-    sscanf(line, "%c %d %d", &trash, &my_tile.data.Move.t, &my_tile.data.Move.vel);
-    tile_time = my_tile.data.Move.t;
+    sscanf(line, "%c %d %ld", &trash, &my_tile.data.Rotate.angle, &my_tile.data.Rotate.vel);
   }
   else if (my_tile.type == 'S')
   {
     my_tile.data.Move.t = 0;
     my_tile.data.Move.vel = 0;
   }
-
 }
 
-
-void refreshTimer(void)
+void chooseState(void)
 {
-  currTime = millis();
-  tis = tis + (currTime - prevTime);
-  prevTime = currTime;
-}
-
-/*void moveRobot(float Vnom, float Wnom)
-{
-  robot.v = Vnom;
-  robot.w = Wnom;
-}*/
-
-
-void setState(byte new_state)
-{
-  tis = 0;
-  oldState = new_state;
+  if (my_tile.type == 'M')
+  {
+    setState(1);
+  }
+  else if (my_tile.type == 'W')
+  {
+    setState(2);
+  }
+  else if (my_tile.type == 'S')
+  {
+    setState(0);
+  }
 }
