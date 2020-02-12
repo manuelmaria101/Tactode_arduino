@@ -1,4 +1,4 @@
-#define TIMEOUT 5000
+#define TIMEOUT 2000
 
 typedef struct CmdMove {
   int t;
